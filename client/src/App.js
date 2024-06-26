@@ -9,21 +9,30 @@ function App() {
   const [results, setResults] = useState([]);
   const [round, setRound] = useState(1);
   const [timer, setTimer] = useState(15);
+  const [gameStarted, setGameStarted] = useState(false);
 
   useEffect(() => {
-    drawClock();
-    const interval = setInterval(() => {
-      setTimer(t => {
-        if (t === 1) {
-          clearInterval(interval);
-          handleRoundEnd();
-        }
-        return t - 1;
-      });
-    }, 1000);
-
-    return () => clearInterval(interval);
-  }, [round]);
+    if (gameStarted) {
+      drawClock();
+      const interval = setInterval(() => {
+        setTimer(prevTimer => {
+          if (prevTimer === 1) {
+            clearInterval(interval);
+            if (round < 5) {
+              handleRoundEnd();
+              setTimer(15);
+              setRound(round + 1);
+            } else {
+              handleRoundEnd();
+              setGameStarted(false);
+            }
+          }
+          return prevTimer - 1;
+        });
+      }, 1000);
+      return () => clearInterval(interval);
+    }
+  }, [gameStarted, round]);
 
   const drawClock = () => {
     const canvas = canvasRef.current;
@@ -32,26 +41,19 @@ function App() {
     const centerY = canvas.height / 2;
     const radius = 150;
 
-    // Clear the canvas
     context.clearRect(0, 0, canvas.width, canvas.height);
-
-    // Draw the empty circle
     context.beginPath();
     context.arc(centerX, centerY, radius, 0, 2 * Math.PI);
     context.strokeStyle = 'black';
     context.lineWidth = 2;
     context.stroke();
 
-    // Generate random time for minute and hour hands
     const minute = Math.floor(Math.random() * 60);
     const hour = Math.floor(Math.random() * 12);
     setActualHour(hour);
     setActualMinute(minute);
 
-    // Draw minute hand
     drawHand(minute, radius, 0.8, 'red');
-
-    // Draw hour hand
     drawHand(hour * 5 + minute / 12, radius * 0.6, 4, 'blue');
   };
 
@@ -72,43 +74,47 @@ function App() {
     context.stroke();
   };
 
+  const handleStartGame = () => {
+    setResults([]);
+    setRound(1);
+    setTimer(15);
+    setGameStarted(true);
+  };
+
   const handleRoundEnd = () => {
     const totalMinutesActual = actualHour * 60 + actualMinute;
     const totalMinutesGuess = parseInt(guessHour) * 60 + parseInt(guessMinute);
     const diff = Math.abs(totalMinutesActual - totalMinutesGuess);
 
-    const newResult = {
-      round: round,
+    setResults(prevResults => [...prevResults, {
+      round,
       actualTime: `${actualHour}:${actualMinute}`,
       guessedTime: `${guessHour}:${guessMinute}`,
       difference: diff
-    };
-    setResults(prev => [...prev, newResult]);
-
-    if (round < 5) {
-      setRound(round + 1);
-      setTimer(15);
-      drawClock();
-      setGuessHour('');
-      setGuessMinute('');
-    }
-  };
-
-  const handleReset = () => {
-    setResults([]);
-    setRound(1);
-    setTimer(15);
-    drawClock();
+    }]);
+    setGuessHour('');
+    setGuessMinute('');
   };
 
   return (
     <div className="App" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
+      {!gameStarted && <h1>The Time Guessing Game</h1>}
       <canvas ref={canvasRef} width="400" height="400" style={{ backgroundColor: 'white', marginBottom: '20px' }} />
+      <div>Round: {round} / 5</div>
       <div>Time Left: {timer} seconds</div>
-      {round <= 5 ?
+      {!gameStarted ? (
+        <button onClick={handleStartGame}>Start Game</button>
+      ) : (
         <form onSubmit={e => {
           e.preventDefault();
           handleRoundEnd();
+          if (round === 5) {
+            setGameStarted(false);
+          } else {
+            setRound(round + 1);
+            setTimer(15);
+            drawClock();
+          }
         }}>
           <input
             type="number"
@@ -129,7 +135,9 @@ function App() {
           />
           <button type="submit">Submit Guess</button>
         </form>
-      : <>
+      )}
+      {results.length === 5 && (
+        <>
           <h2>Game Over! Here are your results:</h2>
           <ul>
             {results.map((result, index) => (
@@ -138,9 +146,9 @@ function App() {
               </li>
             ))}
           </ul>
-          <button onClick={handleReset}>Play Again</button>
+          <button onClick={handleStartGame}>Play Again</button>
         </>
-      }
+      )}
     </div>
   );
 }
