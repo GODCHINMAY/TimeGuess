@@ -1,7 +1,8 @@
-import React, { useState, useEffect, useRef } from 'react';
+// src/App.js
+import React, { useState, useEffect } from 'react';
+import ClockCanvas from './components/ClockCanvas';
 
 function App() {
-  const canvasRef = useRef(null);
   const [actualHour, setActualHour] = useState(0);
   const [actualMinute, setActualMinute] = useState(0);
   const [guessHour, setGuessHour] = useState('');
@@ -10,22 +11,15 @@ function App() {
   const [round, setRound] = useState(1);
   const [timer, setTimer] = useState(15);
   const [gameStarted, setGameStarted] = useState(false);
+  const [totalScore, setTotalScore] = useState(0);
 
   useEffect(() => {
     if (gameStarted) {
-      drawClock();
       const interval = setInterval(() => {
         setTimer(prevTimer => {
           if (prevTimer === 1) {
             clearInterval(interval);
-            if (round < 5) {
-              handleRoundEnd();
-              setTimer(15);
-              setRound(round + 1);
-            } else {
-              handleRoundEnd();
-              setGameStarted(false);
-            }
+            handleRoundEnd();
           }
           return prevTimer - 1;
         });
@@ -34,66 +28,36 @@ function App() {
     }
   }, [gameStarted, round]);
 
-  const drawClock = () => {
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const radius = 150;
+  const handleRoundEnd = () => {
+    const totalMinutesActual = (actualHour - 1) * 60 + actualMinute; // -1 to convert back to 0-11 range for calculation
+    const totalMinutesGuess = (parseInt(guessHour) - 1) * 60 + parseInt(guessMinute);
+    const diff = guessHour && guessMinute ? Math.abs(totalMinutesActual - totalMinutesGuess) : 1000;
 
-    context.clearRect(0, 0, canvas.width, canvas.height);
-    context.beginPath();
-    context.arc(centerX, centerY, radius, 0, 2 * Math.PI);
-    context.strokeStyle = 'black';
-    context.lineWidth = 2;
-    context.stroke();
+    setResults(prevResults => [...prevResults, {
+      round,
+      actualTime: `${actualHour}:${actualMinute}`,
+      guessedTime: `${guessHour || 'No guess'}:${guessMinute || 'No guess'}`,
+      difference: diff
+    }]);
+    setTotalScore(prevScore => prevScore + diff);
 
-    const minute = Math.floor(Math.random() * 60);
-    const hour = Math.floor(Math.random() * 12);
-    setActualHour(hour);
-    setActualMinute(minute);
+    setGuessHour('');
+    setGuessMinute('');
 
-    drawHand(minute, radius, 0.8, 'red');
-    drawHand(hour * 5 + minute / 12, radius * 0.6, 4, 'blue');
-  };
-
-  const drawHand = (value, handLength, lineWidth, color) => {
-    const canvas = canvasRef.current;
-    const context = canvas.getContext('2d');
-    const centerX = canvas.width / 2;
-    const centerY = canvas.height / 2;
-    const angle = (Math.PI * 2 * (value / 60)) - Math.PI / 2;
-    const handX = centerX + Math.cos(angle) * handLength;
-    const handY = centerY + Math.sin(angle) * handLength;
-
-    context.beginPath();
-    context.moveTo(centerX, centerY);
-    context.lineTo(handX, handY);
-    context.strokeStyle = color;
-    context.lineWidth = lineWidth;
-    context.stroke();
+    if (round < 5) {
+      setRound(round + 1);
+      setTimer(15);
+    } else {
+      setGameStarted(false);
+    }
   };
 
   const handleStartGame = () => {
     setResults([]);
     setRound(1);
     setTimer(15);
+    setTotalScore(0);
     setGameStarted(true);
-  };
-
-  const handleRoundEnd = () => {
-    const totalMinutesActual = actualHour * 60 + actualMinute;
-    const totalMinutesGuess = parseInt(guessHour) * 60 + parseInt(guessMinute);
-    const diff = Math.abs(totalMinutesActual - totalMinutesGuess);
-
-    setResults(prevResults => [...prevResults, {
-      round,
-      actualTime: `${actualHour}:${actualMinute}`,
-      guessedTime: `${guessHour}:${guessMinute}`,
-      difference: diff
-    }]);
-    setGuessHour('');
-    setGuessMinute('');
   };
 
   return (
@@ -107,38 +71,32 @@ function App() {
       )}
       {gameStarted && (
         <>
-          <canvas ref={canvasRef} width="400" height="400" style={{ backgroundColor: 'white', marginBottom: '20px' }} />
+          <ClockCanvas setActualHour={setActualHour} setActualMinute={setActualMinute} gameStarted={gameStarted} round={round} />
           <div>Round: {round} / 5</div>
           <div>Time Left: {timer} seconds</div>
           <form onSubmit={e => {
             e.preventDefault();
             handleRoundEnd();
-            if (round === 5) {
-              setGameStarted(false);
-            } else {
-              setRound(round + 1);
-              setTimer(15);
-              drawClock();
-            }
           }}>
             <input
               type="number"
               value={guessHour}
               onChange={e => setGuessHour(e.target.value)}
-              placeholder="Guess Hour (0-11)"
-              style={{ marginRight: '10px' }}
-              max="11"
-              min="0"
+              placeholder="Guess Hour (1-12)"
+              style={{ marginRight: '10px', width: '150px', height: '30px' }}
+              max="12"
+              min="1"
             />
             <input
               type="number"
               value={guessMinute}
               onChange={e => setGuessMinute(e.target.value)}
               placeholder="Guess Minute (0-59)"
+              style={{ marginRight: '10px', width: '150px', height: '30px' }}
               max="59"
               min="0"
             />
-            <button type="submit">Submit Guess</button>
+            <button type="submit" style={{ height: '30px' }}>Submit Guess</button>
           </form>
         </>
       )}
@@ -152,6 +110,7 @@ function App() {
               </li>
             ))}
           </ul>
+          <h2>Total Score: {totalScore} minutes</h2>
           <button onClick={handleStartGame}>Play Again</button>
         </>
       )}
