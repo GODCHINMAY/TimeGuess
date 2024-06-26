@@ -1,6 +1,8 @@
 // src/App.js
 import React, { useState, useEffect } from 'react';
+import axios from 'axios';
 import ClockCanvas from './components/ClockCanvas';
+import ScoreBoard from './components/ScoreBoard';
 
 function App() {
   const [actualHour, setActualHour] = useState(0);
@@ -29,7 +31,7 @@ function App() {
   }, [gameStarted, round]);
 
   const handleRoundEnd = () => {
-    const totalMinutesActual = (actualHour - 1) * 60 + actualMinute; // -1 to convert back to 0-11 range for calculation
+    const totalMinutesActual = (actualHour - 1) * 60 + actualMinute;
     const totalMinutesGuess = (parseInt(guessHour) - 1) * 60 + parseInt(guessMinute);
     const diff = guessHour && guessMinute ? Math.abs(totalMinutesActual - totalMinutesGuess) : 1000;
 
@@ -49,6 +51,15 @@ function App() {
       setTimer(15);
     } else {
       setGameStarted(false);
+      saveScoreToDatabase(totalScore + diff);
+    }
+  };
+
+  const saveScoreToDatabase = async (score) => {
+    try {
+      await axios.post('http://localhost:5000/add_score', { total_score: score });
+    } catch (error) {
+      console.error('Error saving score:', error);
     }
   };
 
@@ -112,6 +123,7 @@ function App() {
           </ul>
           <h2>Total Score: {totalScore} minutes</h2>
           <button onClick={handleStartGame}>Play Again</button>
+          <ScoreBoard totalScore={totalScore} />
         </>
       )}
     </div>
