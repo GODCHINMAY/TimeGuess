@@ -98,43 +98,49 @@ function App() {
 
   return (
     <div className="App" style={{ display: 'flex', flexDirection: 'column', alignItems: 'center', justifyContent: 'center', height: '100vh' }}>
-      {!gameStarted && <h1>The Time Guessing Game</h1>}
-      <canvas ref={canvasRef} width="400" height="400" style={{ backgroundColor: 'white', marginBottom: '20px' }} />
-      <div>Round: {round} / 5</div>
-      <div>Time Left: {timer} seconds</div>
-      {!gameStarted ? (
-        <button onClick={handleStartGame}>Start Game</button>
-      ) : (
-        <form onSubmit={e => {
-          e.preventDefault();
-          handleRoundEnd();
-          if (round === 5) {
-            setGameStarted(false);
-          } else {
-            setRound(round + 1);
-            setTimer(15);
-            drawClock();
-          }
-        }}>
-          <input
-            type="number"
-            value={guessHour}
-            onChange={e => setGuessHour(e.target.value)}
-            placeholder="Guess Hour (0-11)"
-            style={{ marginRight: '10px' }}
-            max="11"
-            min="0"
-          />
-          <input
-            type="number"
-            value={guessMinute}
-            onChange={e => setGuessMinute(e.target.value)}
-            placeholder="Guess Minute (0-59)"
-            max="59"
-            min="0"
-          />
-          <button type="submit">Submit Guess</button>
-        </form>
+      {!gameStarted && (
+        <>
+          <h1>The Time Guessing Game</h1>
+          <img src="/clock.jpg" alt="Clock" style={{ width: '300px', marginBottom: '20px' }} />
+          <button onClick={handleStartGame}>Start Game</button>
+        </>
+      )}
+      {gameStarted && (
+        <>
+          <canvas ref={canvasRef} width="400" height="400" style={{ backgroundColor: 'white', marginBottom: '20px' }} />
+          <div>Round: {round} / 5</div>
+          <div>Time Left: {timer} seconds</div>
+          <form onSubmit={e => {
+            e.preventDefault();
+            handleRoundEnd();
+            if (round === 5) {
+              setGameStarted(false);
+            } else {
+              setRound(round + 1);
+              setTimer(15);
+              drawClock();
+            }
+          }}>
+            <input
+              type="number"
+              value={guessHour}
+              onChange={e => setGuessHour(e.target.value)}
+              placeholder="Guess Hour (0-11)"
+              style={{ marginRight: '10px' }}
+              max="11"
+              min="0"
+            />
+            <input
+              type="number"
+              value={guessMinute}
+              onChange={e => setGuessMinute(e.target.value)}
+              placeholder="Guess Minute (0-59)"
+              max="59"
+              min="0"
+            />
+            <button type="submit">Submit Guess</button>
+          </form>
+        </>
       )}
       {results.length === 5 && (
         <>
